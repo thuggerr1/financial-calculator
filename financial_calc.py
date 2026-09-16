@@ -33,7 +33,7 @@ class FinanceCalculator:
             else:
                 raise ValueError(f"Невідомий метод нарахування: {method}")
         except Exception as e:
-            print(f"Помилка підрахунку днів: {e}")
+            print(f"Помилка розрахунку днів: {e}")
             raise
 
     def future_value(self, method='commercial'):
@@ -53,12 +53,11 @@ class FinanceCalculator:
                 
             return self.principal * (1 + total_interest)
         except KeyError as e:
-            print(f"Помилка FV: Відсутній обов'язковий ключ {e} у розкладі ставок.")
+            print(f"FV: Відсутній обов'язковий ключ {e} у розкладі ставок.")
         except TypeError:
-            print("Помилка FV: Неправильний тип даних для дат або ставок.")
+            print("FV: Неправильний тип даних для дат або ставок.")
         except Exception as e:
             print(f"Неочікувана помилка в future_value: {e}")
-        return None
 
     def present_value(self, target_fv, method='commercial'):
         try:
@@ -77,14 +76,13 @@ class FinanceCalculator:
                 
             return float(target_fv) / (1 + total_interest)
         except ZeroDivisionError:
-            print("Помилка PV: Ділення на нуль (проблема з відсотковою ставкою).")
+            print("PV: Ділення на нуль (проблема з відсотковою ставкою).")
         except KeyError as e:
-            print(f"Помилка PV: Відсутній обов'язковий ключ {e} у розкладі ставок.")
+            print(f"PV: Відсутній обов'язковий ключ {e} у розкладі ставок.")
         except TypeError:
-            print("Помилка PV: Неправильний тип даних.")
+            print("PV: Неправильний тип даних.")
         except Exception as e:
             print(f"Неочікувана помилка в present_value: {e}")
-        return None
 
     def accumulated_value(self):
         try:
@@ -95,7 +93,6 @@ class FinanceCalculator:
             return ordinary_value, commercial_value, exact_value
         except Exception as e:
             print(f"Помилка у методі accumulated_value: {e}")
-            return None, None, None
 
     def interest_rate(self):
         def get_average_rate(method):
@@ -119,4 +116,64 @@ class FinanceCalculator:
             print(f"Помилка розрахунку ставки: Відсутній ключ {e}.")
         except Exception as e:
             print(f"Неочікувана помилка в interest_rate: {e}")
-        return None, None, None
+
+    def real_future_value(self, inflation_rate, method='commercial'):
+        try:
+            nominal_fv = self.future_value(method)
+            total_n = 0
+            for period in self.rate_schedule:
+                days = self._calculate_days(period['start'], period['end'], method)
+                if method in ['ordinary', 'commercial']:
+                    base = 360
+                elif method == 'exact':
+                    base = 366 if calendar.isleap(period['start'].year) else 365
+                else:
+                    raise ValueError(f"Невідомий метод нарахування: {method}")
+                
+                n = days / base
+                total_n += n
+            real_fv = nominal_fv / ((1 + inflation_rate) ** total_n)
+            return real_fv
+        except Exception as e:
+            print(f"Помилка у розрахунку майбутньої вартості з врахуванням інфляції: {e}")
+
+    def plot_growth(self, inflation_rate, method='commercial'):
+        try:
+            x_days = [0]
+            y_nominal = [self.principal]
+            y_real = [self.principal]
+            
+            total_days = 0
+            current_fv = self.principal
+            total_n = 0
+            for period in self.rate_schedule:
+                days = self._calculate_days(period['start'], period['end'], method)
+                total_days += days
+                
+                if method in ['ordinary', 'commercial']:
+                    base = 360
+                elif method == 'exact':
+                    base = 366 if calendar.isleap(period['start'].year) else 365
+                else:
+                    raise ValueError(f"Невідомий метод нарахування: {method}")
+                
+                n = days / base
+                total_n += n
+                
+                current_fv += self.principal * float(period['rate']) * n
+                current_real = current_fv / ((1 + inflation_rate) ** total_n)
+                
+                x_days.append(total_days)
+                y_nominal.append(current_fv)
+                y_real.append(current_real)
+
+            plt.plot(x_days, y_nominal, label='Номінальна вартість')
+            plt.plot(x_days, y_real, label='З урахуванням інфляції')
+            plt.xlabel('Дні')
+            plt.ylabel('Вартість')
+            plt.title('Зростання вартості з часом')
+            plt.legend()
+            plt.show()
+        except Exception as e:
+            print(f"Помилка у побудові графіку: {e}")
+                
