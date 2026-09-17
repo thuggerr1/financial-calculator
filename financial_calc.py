@@ -1,7 +1,8 @@
 import datetime
 import calendar
+import matplotlib
+matplotlib.use('TkAgg')
 import matplotlib.pyplot as plt
-import numpy as np
 
 class FinanceCalculator:
     def __init__(self, principal, rate_schedule):
@@ -162,7 +163,7 @@ class FinanceCalculator:
                 
                 current_fv += self.principal * float(period['rate']) * n
                 current_real = current_fv / ((1 + inflation_rate) ** total_n)
-                
+
                 x_days.append(total_days)
                 y_nominal.append(current_fv)
                 y_real.append(current_real)
@@ -176,4 +177,16 @@ class FinanceCalculator:
             plt.show()
         except Exception as e:
             print(f"Помилка у побудові графіку: {e}")
-                
+
+
+if __name__ == "__main__":
+        my_schedule = [
+        {'rate': 0.10, 'start': datetime.date(2026, 1, 1), 'end': datetime.date(2026, 6, 1)},
+        {'rate': 0.12, 'start': datetime.date(2026, 6, 1), 'end': datetime.date(2026, 12, 31)}
+    ]
+        calc = FinanceCalculator(10000, my_schedule)        
+        print(f"FV (звичайні, комерційні, точні): {calc.accumulated_value()}")
+        print(f"Середні ставки: {calc.interest_rate()}")
+        print(f"Реальна FV (інфляція 5%): {calc.real_future_value(0.05)}")
+        print(f"Шукаємо PV (якщо FV = 11000): {calc.present_value(11000)}")
+        calc.plot_growth(0.08)
